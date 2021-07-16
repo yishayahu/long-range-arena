@@ -51,9 +51,52 @@ flags.DEFINE_string(
     'data_dir', default=None, help='Directory containing datasets.')
 flags.DEFINE_bool(
     'test_only', default=False, help='Run the evaluation on the test data.')
+flags.DEFINE_string(
+    'run_name')
 
 CLASS_MAP = {'imdb_reviews': 2}
 
+class statsManager:
+    def __init__(self):
+        self.avgs = []
+        self.counts = []
+        self.file_name_index = 0
+        for i in range(4):
+            self.avgs.append(None)
+            self.counts.append(0)
+            self.avgs.append(None)
+            self.counts.append(0)
+
+        self.avg1q = None
+        self.count1q = 0
+    def __call__(self, stats):
+        assert len(stats) == 4
+        for row in stats:
+            [lyr],[q],[k] = row
+            jnp.save(f'stats/{lyr}_q_{self.file_name_index}.npy',q)
+            jnp.save(f'stats/{lyr}_k_{self.file_name_index}.npy',k)
+            index = lyr*2
+            if self.avgs[index] is None:
+                self.avgs[index] = q
+            else:
+                self.avgs[index] = self.avgs[index]* self.counts[index] +q
+            self.counts[index]+=1
+            self.avgs[index]/=self.counts[index]
+            index = lyr * 2 +1
+            if self.avgs[index] is None:
+                self.avgs[index] = k
+            else:
+                self.avgs[index] = self.avgs[index]* self.counts[index] +k
+
+            self.counts[index] += 1
+            self.avgs[index] /= self.counts[index]
+        self.file_name_index+=1
+def mm(d):
+    if 'dict' in str(type(d)):
+        to_ret = []
+        for k,v in d.items():
+            to_ret.append((k,mm(v)))
+        return to_ret
 
 def create_model(flax_module, model_kwargs, key, input_shape):
   """Creates and initializes the model."""
@@ -125,9 +168,9 @@ def train_step(optimizer, batch, learning_rate_fn, dropout_rng=None):
 def eval_step(model, batch):
   eval_keys = ['inputs', 'targets']
   (inputs, targets) = [batch.get(k, None) for k in eval_keys]
-  logits = model(inputs, train=False)
+  logits,stats = model(inputs, train=False)
   logging.info(logits)
-  return compute_metrics(logits, targets, None)
+  return compute_metrics(logits, targets, None),stats
 
 
 def main(argv):
@@ -166,7 +209,7 @@ def main(argv):
 
   vocab_size = encoder.vocab_size
   logging.info('Vocab Size: %d', vocab_size)
-
+  wandb.init(project="kernel_functions",run_name=FLAGS.run_name)
   train_ds = train_ds.repeat()
 
   train_iter = iter(train_ds)
@@ -217,6 +260,7 @@ def main(argv):
       axis_name='batch')
   p_eval_step = jax.pmap(eval_step, axis_name='batch')
   # p_pred_step = jax.pmap(predict_step, axis_name='batch')
+  stats_m = statsManager()
 
   def run_eval(eval_ds, num_eval_steps=-1):
     eval_metrics = []
@@ -225,12 +269,17 @@ def main(argv):
       num_iter = itertools.count()
     else:
       num_iter = range(num_eval_steps)
+    # to_save = randint(0,780)
     for _, eval_batch in zip(num_iter, eval_iter):
+      # if _ != to_save:
+      #     continue
       # pylint: disable=protected-access
       eval_batch = common_utils.shard(
           jax.tree_map(lambda x: x._numpy(), eval_batch))
       # pylint: enable=protected-access
-      metrics = p_eval_step(optimizer.target, eval_batch)
+      metrics,stats = p_eval_step(optimizer.target, eval_batch)
+
+      # stats_m(stats)
       eval_metrics.append(metrics)
     eval_metrics = common_utils.get_metrics(eval_metrics)
     eval_metrics_sums = jax.tree_map(jnp.sum, eval_metrics)
@@ -241,6 +290,9 @@ def main(argv):
     # Calculate (clipped) perplexity after averaging log-perplexities:
     eval_summary['perplexity'] = jnp.clip(
         jnp.exp(eval_summary['loss']), a_max=1.0e4)
+    print(eval_summary)
+    print(type(eval_summary))
+    wandb.log(eval_summary)
     return eval_summary
 
   if FLAGS.test_only:
@@ -304,4 +356,6 @@ def main(argv):
 
 
 if __name__ == '__main__':
+  import os
+  os.chdir('/home/yandex/AMNLP2021/yishayahug/long-range-arena')
   app.run(main)

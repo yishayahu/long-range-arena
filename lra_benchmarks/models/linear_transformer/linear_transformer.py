@@ -59,7 +59,7 @@ class LinearTransformerBlock(nn.Module):
     # Attention block.
     assert inputs.ndim == 3
     x = nn.LayerNorm(inputs)
-    x = linear_attention.LinearSelfAttention(
+    x,query,key = linear_attention.LinearSelfAttention(
         x,
         num_heads=num_heads,
         dtype=dtype,
@@ -86,7 +86,7 @@ class LinearTransformerBlock(nn.Module):
         dropout_rate=dropout_rate,
         deterministic=deterministic)
 
-    return x + y
+    return x + y,query,key
 
 
 class LinearTransformerEncoder(nn.Module):
@@ -180,8 +180,10 @@ class LinearTransformerEncoder(nn.Module):
       dtype = jnp.float32
 
     # Input Encoder
+    to_ret = []
     for lyr in range(num_layers):
-      x = LinearTransformerBlock(
+
+      x,query,key = LinearTransformerBlock(
           x,
           qkv_dim=qkv_dim,
           mlp_dim=mlp_dim,
@@ -193,12 +195,15 @@ class LinearTransformerEncoder(nn.Module):
           attention_dropout_rate=attention_dropout_rate,
           deterministic=not train,
           name=f'encoderblock_{lyr}')
+      to_ret.append((lyr,query,key))
     encoded = nn.LayerNorm(x, dtype=dtype, name='encoder_norm')
 
     if classifier:
       encoded = common_layers.classifier_head(
           encoded, num_classes, mlp_dim, pooling_mode=classifier_pool)
-    return encoded
+    if train:
+        return encoded
+    return encoded,to_ret
 
 
 class LinearTransformerDualEncoder(nn.Module):
