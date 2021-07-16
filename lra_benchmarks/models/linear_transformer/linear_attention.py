@@ -62,6 +62,8 @@ def linear_attention(query,
 
   query_mapped = feature_map(query)
   key_mapped = feature_map(key)
+  # key_mapped = key
+  # query_mapped = query
   kv = jnp.einsum('nshd,nshm->nhmd', key_mapped, value)
 
   z = 1 / (
@@ -166,6 +168,24 @@ class LinearAttention(nn.Module):
     query, key, value = (dense(inputs_q, dtype=dtype, name='query'),
                          dense(inputs_kv, dtype=dtype, name='key'),
                          dense(inputs_kv, dtype=dtype, name='value'))
+    # orig_shape = key.shape
+    # x = jnp.reshape(key, (-1, 64))
+    #
+    # for i in range(3):
+    #     x = nn.Dense(features=64,inputs=x)
+    #     x = nn.gelu(x)
+    # x = nn.Dense(features=64,inputs=x)
+    # key =  jnp.reshape(x, orig_shape)
+    #
+    # orig_shape = query.shape
+    # x = jnp.reshape(query, (-1, 64))
+    #
+    # for i in range(3):
+    #     x = nn.Dense(features=64,inputs=x)
+    #     x = nn.gelu(x)
+    # x = nn.Dense(features=64,inputs=x)
+    # query = jnp.reshape(x, orig_shape)
+
 
     if cache:
       raise NotImplementedError('Decoding not supported in LinearAttention.')
@@ -192,7 +212,7 @@ class LinearAttention(nn.Module):
         precision=precision,
         name='out')
 
-    return out
+    return out,query.reshape(-1,64),key.reshape(-1,64)
 
 
 LinearSelfAttention = LinearAttention.partial(inputs_kv=None)
