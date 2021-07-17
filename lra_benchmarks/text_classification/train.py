@@ -17,7 +17,7 @@ import itertools
 import json
 import os
 import time
-
+import wandb
 from absl import app
 from absl import flags
 from absl import logging
@@ -51,9 +51,19 @@ flags.DEFINE_string(
     'data_dir', default=None, help='Directory containing datasets.')
 flags.DEFINE_bool(
     'test_only', default=False, help='Run the evaluation on the test data.')
+flags.DEFINE_string(
+    'run_name', default=None, help='Directory containing datasets.')
 
 CLASS_MAP = {'imdb_reviews': 2}
 
+def mm(d):
+    if 'dict' in str(type(d)):
+        to_ret = []
+        for k,v in d.items():
+            to_ret.append((k,mm(v)))
+        return to_ret
+    else:
+        return ''
 
 def create_model(flax_module, model_kwargs, key, input_shape):
   """Creates and initializes the model."""
@@ -65,6 +75,8 @@ def create_model(flax_module, model_kwargs, key, input_shape):
       _, initial_params = module.init_by_shape(key,
                                                [(input_shape, jnp.float32)])
       model = nn.Model(module, initial_params)
+      for row in mm(initial_params):
+          logging.info(str(row))
     return model
 
   return _create_model(key)
@@ -148,7 +160,7 @@ def main(argv):
   model_type = config.model_type
 
   max_length = config.max_length
-
+  wandb.init(project="kernel_functions",run_name=FLAGS.run_name)
   if jax.host_id() == 0:
     summary_writer = tensorboard.SummaryWriter(
         os.path.join(FLAGS.model_dir, 'summary'))
@@ -297,6 +309,7 @@ def main(argv):
       eval_summary = run_eval(eval_ds, num_eval_steps)
       logging.info('eval in step: %d, loss: %.4f, acc: %.4f', step,
                    eval_summary['loss'], eval_summary['accuracy'])
+      wandb.log({'loss':float(eval_summary['loss']),'accuracy':float(eval_summary['accuracy'])})
       if jax.host_id() == 0:
         for key, val in eval_summary.items():
           summary_writer.scalar(f'eval_{key}', val, step)
@@ -304,4 +317,6 @@ def main(argv):
 
 
 if __name__ == '__main__':
+  import os
+  os.chdir('/home/yandex/AMNLP2021/yishayahug/long-range-arena')
   app.run(main)

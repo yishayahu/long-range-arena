@@ -40,7 +40,7 @@ def preprocess_dataset(file_path, batch_size):
 
 def get_imdb_dataset():
   """Get dataset from  imdb tfds. converts into src/tgt pairs."""
-  data = tfds.load('imdb_reviews')
+  data = tfds.load('imdb_reviews',data_dir='/home/yandex/AMNLP2021/yishayahug/long-range-arena/data/')
   train_raw = data['train']
   valid_raw = data['test']
   test_raw = data['test']

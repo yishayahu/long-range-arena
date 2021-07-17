@@ -17,6 +17,7 @@ from flax import nn
 import jax.numpy as jnp
 
 
+
 def elu_feature_map(x):
   return nn.elu(x) + 1
 

@@ -19,6 +19,7 @@ from lra_benchmarks.models.layers import common_layers
 from lra_benchmarks.models.linear_transformer import linear_attention
 
 
+
 class LinearTransformerBlock(nn.Module):
   """FastTransformer layer (https://arxiv.org/abs/2006.16236)."""
 
