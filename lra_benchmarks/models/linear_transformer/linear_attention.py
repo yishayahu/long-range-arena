@@ -61,10 +61,10 @@ def linear_attention(query,
   assert (query.shape[0:1] == key.shape[0:1] and
           query.shape[-1] == key.shape[-1])
 
-  query_mapped = feature_map(query)
-  key_mapped = feature_map(key)
-  # query_mapped = query
-  # key_mapped = key
+  # query_mapped = feature_map(query)
+  # key_mapped = feature_map(key)
+  query_mapped = query
+  key_mapped = key
   kv = jnp.einsum('nshd,nshm->nhmd', key_mapped, value)
 
   z = 1 / (
@@ -177,7 +177,7 @@ class LinearAttention(nn.Module):
 
     for i in range(3):
         x = nn.Dense(features=64,inputs=x)
-        x = nn.gelu(x)
+        x = nn.elu(x) +1.001
     x = nn.Dense(features=64,inputs=x)
     key =  jnp.reshape(x, orig_shape)
 
@@ -186,7 +186,7 @@ class LinearAttention(nn.Module):
 
     for i in range(3):
         x = nn.Dense(features=64,inputs=x)
-        x = nn.gelu(x)
+        x = nn.elu(x) +1.001
     x = nn.Dense(features=64,inputs=x)
     query = jnp.reshape(x, orig_shape)
     # apply regular dot product attention
