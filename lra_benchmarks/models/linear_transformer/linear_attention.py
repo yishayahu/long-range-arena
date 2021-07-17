@@ -74,7 +74,15 @@ def linear_attention(query,
 
   return y
 
+def model_func(x):
+    orig_shape = x.shape
+    x = jnp.reshape(x, (-1, 64))
 
+    for i in [32,16,16,32,64]:
+        x = nn.Dense(features=i, inputs=x)
+        x = nn.relu(x)
+    x = nn.Dense(features=64, inputs=x)
+    return jnp.reshape(x, orig_shape)
 class LinearAttention(nn.Module):
   """Linear Attention Architecture."""
 
@@ -172,23 +180,10 @@ class LinearAttention(nn.Module):
 
     if cache:
       raise NotImplementedError('Decoding not supported in LinearAttention.')
-    orig_shape = key.shape
-    x = jnp.reshape(key, (-1, 64))
 
-    for i in range(7):
-        x = nn.Dense(features=64,inputs=x)
-        x = nn.relu(x)
-    x = nn.Dense(features=64,inputs=x)
-    key =  jnp.reshape(x, orig_shape)
+    key = model_func(key)
+    query = model_func(query)
 
-    orig_shape = query.shape
-    x = jnp.reshape(query, (-1, 64))
-
-    for i in range(7):
-        x = nn.Dense(features=64,inputs=x)
-        x = nn.relu(x)
-    x = nn.Dense(features=64,inputs=x)
-    query = jnp.reshape(x, orig_shape)
     # apply regular dot product attention
     x = linear_attention(
         query,
