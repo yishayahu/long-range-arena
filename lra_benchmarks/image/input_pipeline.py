@@ -62,9 +62,9 @@ def get_cifar10_datasets(n_devices, batch_size=256, normalize=False):
     raise ValueError("Batch size %d isn't divided evenly by n_devices %d" %
                      (batch_size, n_devices))
 
-  train_dataset = tfds.load('cifar10', split='train[:90%]')
-  val_dataset = tfds.load('cifar10', split='train[90%:]')
-  test_dataset = tfds.load('cifar10', split='test')
+  train_dataset = tfds.load('cifar10', split='train[:90%]',data_dir='/home/yandex/AMNLP2021/yishayahug/long-range-arena/data_image1/')
+  val_dataset = tfds.load('cifar10', split='train[90%:]',data_dir='/home/yandex/AMNLP2021/yishayahug/long-range-arena/data_image2/')
+  test_dataset = tfds.load('cifar10', split='test',data_dir='/home/yandex/AMNLP2021/yishayahug/long-range-arena/data_image3/')
 
   def decode(x):
     decoded = {

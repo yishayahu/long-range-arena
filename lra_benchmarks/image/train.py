@@ -38,7 +38,7 @@ from lra_benchmarks.utils import train_utils
 
 from ml_collections import config_flags
 import tensorflow.compat.v2 as tf
-
+import wandb
 
 FLAGS = flags.FLAGS
 
@@ -49,6 +49,8 @@ flags.DEFINE_string(
 flags.DEFINE_string('task_name', default='mnist', help='Name of the task')
 flags.DEFINE_bool(
     'eval_only', default=False, help='Run the evaluation on the test data.')
+flags.DEFINE_string(
+    'run_name', default=None, help='Directory containing datasets.')
 
 
 def create_model(flax_module, model_kwargs, key, input_shape):
@@ -177,6 +179,7 @@ def test(optimizer, state, p_eval_step, step, test_ds, summary_writer,
       test_metrics_sums)
   logging.info('test in step: %d, loss: %.4f, acc: %.4f', step,
                test_summary['loss'], test_summary['accuracy'])
+  wandb.log({'test_loss': float(test_summary['loss']), 'test_accuracy': float(test_summary['accuracy'])})
   if jax.host_id() == 0:
     for key, val in test_summary.items():
       summary_writer.scalar(f'test_{key}', val, step)
@@ -240,6 +243,7 @@ def train_loop(config, dropout_rngs, eval_ds, eval_freq, num_eval_steps,
       # Calculate (clipped) perplexity after averaging log-perplexities:
       logging.info('train in step: %d, loss: %.4f, acc: %.4f', step,
                    summary['loss'], summary['accuracy'])
+
       if jax.host_id() == 0:
         tock = time.time()
         steps_per_sec = eval_freq / (tock - tick)
@@ -274,6 +278,7 @@ def train_loop(config, dropout_rngs, eval_ds, eval_freq, num_eval_steps,
           eval_metrics_sums)
       logging.info('eval in step: %d, loss: %.4f, acc: %.4f', step,
                    eval_summary['loss'], eval_summary['accuracy'])
+      wandb.log({'loss': float(eval_summary['loss']), 'accuracy': float(eval_summary['accuracy'])})
       if jax.host_id() == 0:
         for key, val in eval_summary.items():
           summary_writer.scalar(f'val_{key}', val, step)
@@ -297,6 +302,7 @@ def main(argv):
   eval_freq = config.eval_frequency
   random_seed = config.random_seed
   model_type = config.model_type
+  wandb.init(project="kernel_functions_image", name=FLAGS.run_name)
 
   if jax.host_id() == 0:
     summary_writer = tensorboard.SummaryWriter(
