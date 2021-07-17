@@ -160,7 +160,7 @@ def main(argv):
   model_type = config.model_type
 
   max_length = config.max_length
-  wandb.init(project="kernel_functions",run_name=FLAGS.run_name)
+  wandb.init(project="kernel_functions",name=FLAGS.run_name)
   if jax.host_id() == 0:
     summary_writer = tensorboard.SummaryWriter(
         os.path.join(FLAGS.model_dir, 'summary'))
