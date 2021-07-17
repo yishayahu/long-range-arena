@@ -61,10 +61,10 @@ def linear_attention(query,
   assert (query.shape[0:1] == key.shape[0:1] and
           query.shape[-1] == key.shape[-1])
 
-  # query_mapped = feature_map(query)
-  # key_mapped = feature_map(key)
-  query_mapped = query
-  key_mapped = key
+  query_mapped = feature_map(query)
+  key_mapped = feature_map(key)
+  # query_mapped = query
+  # key_mapped = key
   kv = jnp.einsum('nshd,nshm->nhmd', key_mapped, value)
 
   z = 1 / (
