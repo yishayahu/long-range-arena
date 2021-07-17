@@ -175,18 +175,18 @@ class LinearAttention(nn.Module):
     orig_shape = key.shape
     x = jnp.reshape(key, (-1, 64))
 
-    for i in range(3):
+    for i in range(7):
         x = nn.Dense(features=64,inputs=x)
-        x = nn.relu(x)
+        x = nn.elu(x) + 1.001
     x = nn.Dense(features=64,inputs=x)
     key =  jnp.reshape(x, orig_shape)
 
     orig_shape = query.shape
     x = jnp.reshape(query, (-1, 64))
 
-    for i in range(3):
+    for i in range(7):
         x = nn.Dense(features=64,inputs=x)
-        x = nn.relu(x)
+        x = nn.elu(x) + 1.001
     x = nn.Dense(features=64,inputs=x)
     query = jnp.reshape(x, orig_shape)
     # apply regular dot product attention
