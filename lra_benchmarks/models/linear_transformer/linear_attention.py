@@ -184,7 +184,6 @@ class LinearAttention(nn.Module):
     res = model_func(jnp.concatenate([key,query],axis=3))
     key = res[:,:,:,:64]
     query = res[:,:,:,64:]
-    query = model_func(query)
 
     # apply regular dot product attention
     x = linear_attention(
