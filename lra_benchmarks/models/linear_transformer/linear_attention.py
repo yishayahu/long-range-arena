@@ -80,7 +80,7 @@ def model_func(x):
 
     for i in range(3):
         x = nn.Dense(features=orig_shape[-1], inputs=x)
-        x = nn.relu(x)
+        x = nn.elu(x) +1.001
     x = nn.Dense(features=orig_shape[-1], inputs=x)
     return jnp.reshape(x, orig_shape)
 class LinearAttention(nn.Module):
