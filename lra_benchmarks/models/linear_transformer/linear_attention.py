@@ -61,10 +61,10 @@ def linear_attention(query,
   assert (query.shape[0:1] == key.shape[0:1] and
           query.shape[-1] == key.shape[-1])
 
-  query_mapped = feature_map(query)
-  key_mapped = feature_map(key)
-  # query_mapped = query
-  # key_mapped = key
+  # query_mapped = feature_map(query)
+  # key_mapped = feature_map(key)
+  query_mapped = query
+  key_mapped = key
   kv = jnp.einsum('nshd,nshm->nhmd', key_mapped, value)
 
   z = 1 / (
@@ -76,12 +76,12 @@ def linear_attention(query,
 
 def model_func(x):
     orig_shape = x.shape
-    x = jnp.reshape(x, (-1, 128))
+    x = jnp.reshape(x, (-1, orig_shape[-1]))
 
     for i in range(3):
-        x = nn.Dense(features=128, inputs=x)
+        x = nn.Dense(features=orig_shape[-1], inputs=x)
         x = nn.relu(x)
-    x = nn.Dense(features=128, inputs=x)
+    x = nn.Dense(features=orig_shape[-1], inputs=x)
     return jnp.reshape(x, orig_shape)
 class LinearAttention(nn.Module):
   """Linear Attention Architecture."""
@@ -182,8 +182,11 @@ class LinearAttention(nn.Module):
       raise NotImplementedError('Decoding not supported in LinearAttention.')
 
     # res = model_func(jnp.concatenate([key,query],axis=3))
+    # res = model_func(jnp.concatenate([key,query],axis=3))
     # key = res[:,:,:,:64]
     # query = res[:,:,:,64:]
+    key = model_func(key)
+    query = model_func(query)
 
     # apply regular dot product attention
     x = linear_attention(
